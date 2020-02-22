@@ -29,7 +29,7 @@ while e < NUM_EPISODES:
     env.reset()
     terminated = False
 
-    #Obtain first state, unused by random agent, but inluded for illustration
+    # Obtain first state, unused by random agent, but included for illustration
     s = env.state()
     while(not terminated):
         # Select an action uniformly at random
@@ -38,7 +38,7 @@ while e < NUM_EPISODES:
         # Act according to the action and observe the transition and reward
         reward, terminated = env.act(action)
 
-        # Obtain s_prime, unused by random agent, but inluded for illustration
+        # Obtain s_prime, unused by random agent, but included for illustration
         s_prime = env.state()
 
         G += reward
