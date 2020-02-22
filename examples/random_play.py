@@ -11,7 +11,7 @@ from minatar import Environment
 NUM_EPISODES = 1000
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--game", "-g", type=str)
+parser.add_argument("--game", "-g", default='asterix', type=str)
 args = parser.parse_args()
 
 env = Environment(args.game)
@@ -40,6 +40,8 @@ while e < NUM_EPISODES:
 
         # Obtain s_prime, unused by random agent, but included for illustration
         s_prime = env.state()
+
+        env.display_state(50)
 
         G += reward
 

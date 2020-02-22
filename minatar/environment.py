@@ -5,7 +5,11 @@
 ################################################################################################################
 from importlib import import_module
 import numpy as np
+import cv2
 
+from matplotlib import pyplot as plt
+from matplotlib import colors
+import seaborn as sns
 
 #####################################################################################################################
 # Environment
@@ -19,11 +23,22 @@ class Environment:
         env_module = import_module('minatar.environments.'+env_name)
         self.env_name = env_name
         self.env = env_module.Env(ramping=difficulty_ramping, seed=random_seed)
-        self.n_channels = self.env.state_shape()[2]
+        self.env_state_shape = self.env.state_shape()
+        self.n_channels = self.env_state_shape[2]
         self.sticky_action_prob = sticky_action_prob
         self.last_action = 0
         self.visualized = False
         self.closed = False
+
+        self.cmap = sns.color_palette("cubehelix", self.n_channels)
+        self.cmap_render = \
+            [(np.uint8(255 * self.cmap[i][0]), np.uint8(255 * self.cmap[i][1]), np.uint8(255 * self.cmap[i][2]))
+             for i in range(len(self.cmap))]
+
+        self.cmap.insert(0, (0, 0, 0))
+        self.cmap = colors.ListedColormap(self.cmap)
+        bounds = [i for i in range(self.n_channels + 2)]
+        self.norm = colors.BoundaryNorm(bounds, self.n_channels + 1)
 
     # Wrapper for env.act
     def act(self, a):
@@ -59,31 +74,34 @@ class Environment:
     # Display the current environment state for time milliseconds using matplotlib
     def display_state(self, time=50):
         if not self.visualized:
-            global plt
-            global colors
-            global sns
-            mpl = __import__('matplotlib.pyplot', globals(), locals())
-            plt = mpl.pyplot
-            mpl = __import__('matplotlib.colors', globals(), locals())
-            colors = mpl.colors
-            sns = __import__('seaborn', globals(), locals())
-            self.cmap = sns.color_palette("cubehelix", self.n_channels)
-            self.cmap.insert(0, (0, 0, 0))
-            self.cmap=colors.ListedColormap(self.cmap)
-            bounds = [i for i in range(self.n_channels+2)]
-            self.norm = colors.BoundaryNorm(bounds, self.n_channels+1)
-            _, self.ax = plt.subplots(1,1)
+            _, self.ax = plt.subplots(1, 1)
             plt.show(block=False)
             self.visualized = True
-        if(self.closed):
+
+        if self.closed:
             _, self.ax = plt.subplots(1,1)
             plt.show(block=False)
             self.closed = False
+
         state = self.env.state()
         numerical_state = np.amax(state*np.reshape(np.arange(self.n_channels) + 1, (1, 1, -1)), 2) + 0.5
-        self.ax.imshow(numerical_state, cmap=self.cmap, norm=self.norm, interpolation='none')
+
+        plt.imshow(numerical_state, cmap=self.cmap, norm=self.norm, interpolation='none')
+
         plt.pause(time/1000)
         plt.cla()
+
+    # Create rendered state observation
+    def render_state(self, size=300):
+        state = self.env.state()
+        obs_image = np.zeros((self.env_state_shape[0], self.env_state_shape[1], 3), dtype=np.uint8)
+        for x in range(self.env_state_shape[0]):
+            for y in range(self.env_state_shape[1]):
+                for z in range(self.env_state_shape[2]):
+                    if state[x, y, z] == 1:
+                        obs_image[x, y, :] = self.env_state_shape[z]
+        obs_image = cv2.resize(obs_image, (size, size), interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+        return obs_image
 
     def close_display(self):
         plt.close()
