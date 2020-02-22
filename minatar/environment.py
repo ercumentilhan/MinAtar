@@ -81,7 +81,6 @@ class Environment:
             self.closed = False
         state = self.env.state()
         numerical_state = np.amax(state*np.reshape(np.arange(self.n_channels) + 1, (1, 1, -1)), 2) + 0.5
-        print(numerical_state)
         self.ax.imshow(numerical_state, cmap=self.cmap, norm=self.norm, interpolation='none')
         plt.pause(time/1000)
         plt.cla()
