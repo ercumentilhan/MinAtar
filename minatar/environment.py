@@ -15,10 +15,10 @@ import numpy as np
 #
 #####################################################################################################################
 class Environment:
-    def __init__(self, env_name, sticky_action_prob = 0.1, difficulty_ramping = True, random_seed = None):
+    def __init__(self, env_name, sticky_action_prob=0.1, difficulty_ramping=True, random_seed=None):
         env_module = import_module('minatar.environments.'+env_name)
         self.env_name = env_name
-        self.env = env_module.Env(ramping = difficulty_ramping, seed = random_seed)
+        self.env = env_module.Env(ramping=difficulty_ramping, seed=random_seed)
         self.n_channels = self.env.state_shape()[2]
         self.sticky_action_prob = sticky_action_prob
         self.last_action = 0
@@ -27,7 +27,7 @@ class Environment:
 
     # Wrapper for env.act
     def act(self, a):
-        if(np.random.rand()<self.sticky_action_prob):
+        if np.random.rand() < self.sticky_action_prob:
             a = self.last_action
         self.last_action = a
         return self.env.act(a)
@@ -58,7 +58,7 @@ class Environment:
 
     # Display the current environment state for time milliseconds using matplotlib
     def display_state(self, time=50):
-        if(not self.visualized):
+        if not self.visualized:
             global plt
             global colors
             global sns
@@ -68,7 +68,7 @@ class Environment:
             colors = mpl.colors
             sns = __import__('seaborn', globals(), locals())
             self.cmap = sns.color_palette("cubehelix", self.n_channels)
-            self.cmap.insert(0,(0,0,0))
+            self.cmap.insert(0, (0, 0, 0))
             self.cmap=colors.ListedColormap(self.cmap)
             bounds = [i for i in range(self.n_channels+2)]
             self.norm = colors.BoundaryNorm(bounds, self.n_channels+1)
@@ -80,7 +80,8 @@ class Environment:
             plt.show(block=False)
             self.closed = False
         state = self.env.state()
-        numerical_state = np.amax(state*np.reshape(np.arange(self.n_channels)+1,(1,1,-1)),2)+0.5
+        numerical_state = np.amax(state*np.reshape(np.arange(self.n_channels) + 1, (1, 1, -1)), 2) + 0.5
+        print(numerical_state)
         self.ax.imshow(numerical_state, cmap=self.cmap, norm=self.norm, interpolation='none')
         plt.pause(time/1000)
         plt.cla()
