@@ -19,6 +19,7 @@ shot_cool_down = 5
 enemy_shot_interval = 10
 enemy_move_interval = 5
 diver_move_interval = 5
+time_limit = 2000
 
 
 #####################################################################################################################
@@ -40,18 +41,18 @@ diver_move_interval = 5
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = True, seed = None):
+    def __init__(self, ramping=True, seed=None):
         self.channels ={
-            'sub_front':0,
-            'sub_back':1,
-            'friendly_bullet':2,
-            'trail':3,
-            'enemy_bullet':4,
-            'enemy_fish':5,
-            'enemy_sub':6,
-            'oxygen_guage':7,
-            'diver_guage':8,
-            'diver':9
+            'sub_front': 0,
+            'sub_back': 1,
+            'friendly_bullet': 2,
+            'trail': 3,
+            'enemy_bullet': 4,
+            'enemy_fish': 5,
+            'enemy_sub': 6,
+            'oxygen_gauge': 7,
+            'diver_gauge': 8,
+            'diver': 9
         }
         self.action_map = ['n','l','u','r','d','f']
         self.ramping = ramping
@@ -61,55 +62,55 @@ class Env:
     # Update environment according to agent action
     def act(self, a):
         r = 0
-        if(self.terminal):
+        if self.terminal:
             return r, self.terminal
             
         a = self.action_map[a]
 
         # Spawn enemy if timer is up
-        if(self.e_spawn_timer==0):
+        if self.e_spawn_timer == 0:
             self._spawn_enemy()
             self.e_spawn_timer = self.e_spawn_speed
 
-        if(self.d_spawn_timer==0):
+        if self.d_spawn_timer == 0:
             self._spawn_diver()
             self.d_spawn_timer = diver_spawn_speed
 
         # Resolve player action
-        if(a=='f' and self.shot_timer == 0):
-            self.f_bullets+=[[self.sub_x, self.sub_y, self.sub_or]]
+        if a == 'f' and self.shot_timer == 0:
+            self.f_bullets += [[self.sub_x, self.sub_y, self.sub_or]]
             self.shot_timer = shot_cool_down
-        elif(a=='l'):
+        elif a == 'l':
             self.sub_x = max(0, self.sub_x-1)
             self.sub_or = False
-        elif(a=='r'):
+        elif a == 'r':
             self.sub_x = min(9, self.sub_x+1)
             self.sub_or = True
-        elif(a=='u'):
+        elif a == 'u':
             self.sub_y = max(0, self.sub_y-1)
-        elif(a=='d'):
+        elif a == 'd':
             self.sub_y = min(8, self.sub_y+1)
 
         # Update friendly Bullets
         for bullet in reversed(self.f_bullets):
-            bullet[0]+=1 if bullet[2] else -1
-            if(bullet[0]<0 or bullet[0]>9):
+            bullet[0] += 1 if bullet[2] else -1
+            if bullet[0] < 0 or bullet[0] > 9:
                 self.f_bullets.remove(bullet)
             else:
                 removed = False
                 for x in self.e_fish:
-                    if(bullet[0:2]==x[0:2]):
+                    if bullet[0:2] == x[0:2]:
                         self.e_fish.remove(x)
                         self.f_bullets.remove(bullet)
-                        r+=1
+                        r += 1
                         removed = True
                         break
-                if(not removed):
+                if not removed:
                     for x in self.e_subs:
-                        if(bullet[0:2]==x[0:2]):
+                        if bullet[0:2] == x[0:2]:
                             self.e_subs.remove(x)
                             self.f_bullets.remove(bullet)
-                            r+=1
+                            r += 1
 
         # Update divers
         for diver in reversed(self.divers):
@@ -187,20 +188,25 @@ class Env:
                 fish[3]-=1
 
         # Update various timers
-        self.e_spawn_timer -= self.e_spawn_timer>0
-        self.d_spawn_timer -= self.d_spawn_timer>0
-        self.shot_timer -= self.shot_timer>0
-        if(self.oxygen<0):
+        self.e_spawn_timer -= self.e_spawn_timer > 0
+        self.d_spawn_timer -= self.d_spawn_timer > 0
+        self.shot_timer -= self.shot_timer > 0
+        if self.oxygen < 0:
             self.terminal = True
-        if(self.sub_y>0):
-            self.oxygen-=1
+        if self.sub_y > 0:
+            self.oxygen -= 1
             self.surface = False
         else:
-            if(not self.surface):
-                if(self.diver_count == 0):
+            if not self.surface:
+                if self.diver_count == 0:
                     self.terminal = True
                 else:
-                    r+=self._surface()
+                    r += self._surface()
+
+        self.terminate_timer -= 1
+        if self.terminate_timer < 0:
+            self.terminal = True
+
         return r, self.terminal
 
     # Called when player hits surface (top row) if they have no divers, this ends the game, 
@@ -208,7 +214,7 @@ class Env:
     # otherwise this reduces the number of divers and restores full oxygen
     def _surface(self):
         self.surface = True
-        if(self.diver_count == 6):
+        if self.diver_count == 6:
             self.diver_count = 0
             r = self.oxygen*10//max_oxygen
         else:
@@ -300,6 +306,7 @@ class Env:
         self.ramp_index = 0
         self.shot_timer = 0
         self.surface = True
+        self.terminate_timer = time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)

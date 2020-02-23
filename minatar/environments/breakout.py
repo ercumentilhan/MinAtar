@@ -5,6 +5,11 @@
 ################################################################################################################
 import numpy as np
 
+#####################################################################################################################
+# Constants
+#
+#####################################################################################################################
+time_limit = 2000
 
 #####################################################################################################################
 # Env
@@ -17,7 +22,7 @@ import numpy as np
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = None, seed = None):
+    def __init__(self, ramping=None, seed=None):
         self.channels ={
             'paddle':0,
             'ball':1,
@@ -80,10 +85,10 @@ class Env:
             if(np.count_nonzero(self.brick_map)==0):
                 self.brick_map[1:4,:] = 1
             if(self.ball_x == self.pos):
-                self.ball_dir=[3,2,1,0][self.ball_dir]
+                self.ball_dir = [3,2,1,0][self.ball_dir]
                 new_y = self.last_y
             elif(new_x == self.pos):
-                self.ball_dir=[2,3,0,1][self.ball_dir]
+                self.ball_dir = [2,3,0,1][self.ball_dir]
                 new_y = self.last_y
             else:
                 self.terminal = True
@@ -93,6 +98,12 @@ class Env:
 
         self.ball_x = new_x
         self.ball_y = new_y
+
+        # Update various timers
+        self.terminate_timer -= 1
+        if self.terminate_timer < 0:
+            self.terminal = True
+
         return r, self.terminal
 
     # Query the current level of the difficulty ramp, difficulty does not ramp in this game, so return None
@@ -101,7 +112,7 @@ class Env:
 
     # Process the game-state into the 10x10xn state provided to the agent and return
     def state(self):
-        state = np.zeros((10,10,len(self.channels)),dtype=bool)
+        state = np.zeros((10, 10, len(self.channels)), dtype=bool)
         state[self.ball_y,self.ball_x,self.channels['ball']] = 1
         state[9,self.pos, self.channels['paddle']] = 1
         state[self.last_y,self.last_x,self.channels['trail']] = 1
@@ -119,11 +130,12 @@ class Env:
         self.strike = False
         self.last_x = self.ball_x
         self.last_y = self.ball_y
+        self.terminate_timer = time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)
     def state_shape(self):
-        return [10,10,len(self.channels)]
+        return [10, 10, len(self.channels)]
 
     # Subset of actions that actually have a unique impact in this environment
     def minimal_action_set(self):

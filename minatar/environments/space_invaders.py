@@ -13,7 +13,7 @@ import numpy as np
 shot_cool_down = 5
 enemy_move_interval = 12
 enemy_shot_interval = 10
-
+time_limit = 2000
 
 #####################################################################################################################
 # Env 
@@ -91,19 +91,25 @@ class Env:
 
         kill_locations = np.logical_and(self.alien_map,self.alien_map==self.f_bullet_map)
 
-        r+=np.sum(kill_locations)
+        r += np.sum(kill_locations)
         self.alien_map[kill_locations] = self.f_bullet_map[kill_locations] = 0
 
         
         # Update various timers
-        self.shot_timer -= self.shot_timer>0
-        self.alien_move_timer-=1
-        self.alien_shot_timer-=1
-        if(np.count_nonzero(self.alien_map)==0):
-            if(self.enemy_move_interval>6 and self.ramping):
-                self.enemy_move_interval-=1
-                self.ramp_index+=1
-            self.alien_map[0:4,2:8] = 1
+        self.shot_timer -= self.shot_timer > 0
+        self.alien_move_timer -= 1
+        self.alien_shot_timer -= 1
+
+        if np.count_nonzero(self.alien_map) == 0:
+            if self.enemy_move_interval > 6 and self.ramping:
+                self.enemy_move_interval -= 1
+                self.ramp_index += 1
+            self.alien_map[0:4, 2:8] = 1
+
+        self.terminate_timer -= 1
+        if self.terminate_timer < 0:
+            self.terminal = True
+
         return r, self.terminal
 
     # Find the alien closest to player in manhattan distance, currently used to decide which alien shoots
@@ -145,6 +151,7 @@ class Env:
         self.alien_shot_timer = enemy_shot_interval
         self.ramp_index = 0
         self.shot_timer = 0
+        self.terminate_timer = time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)
