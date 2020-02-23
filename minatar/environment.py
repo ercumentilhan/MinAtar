@@ -71,6 +71,10 @@ class Environment:
     def minimal_action_set(self):
         return self.env.minimal_action_set()
 
+    # (Re)sets the random state of the environment, useful to reproduce the same level sequences for evaluation purposes
+    def set_random_state(self, seed):
+        self.env.random = np.random.RandomState(seed)
+
     # Display the current environment state for time milliseconds using matplotlib
     def display_state(self, time=50):
         if not self.visualized:
