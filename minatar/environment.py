@@ -103,7 +103,7 @@ class Environment:
             for y in range(self.env_state_shape[1]):
                 for z in range(self.env_state_shape[2]):
                     if state[x, y, z] == 1:
-                        obs_image[x, y, :] = self.env_state_shape[z]
+                        obs_image[x, y, :] = self.cmap_render[z]
         obs_image = cv2.resize(obs_image, (size, size), interpolation=cv2.INTER_NEAREST).astype(np.uint8)
         return obs_image
 
