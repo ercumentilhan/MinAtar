@@ -64,7 +64,7 @@ class Env:
         for i in range(len(self.entities)):     
             x = self.entities[i]    
             if x is not None:
-                if x[0:2] == [self.player_x,self.player_y]:
+                if x[0:2] == [self.player_x, self.player_y]:
                     if self.entities[i][3]:
                         self.entities[i] = None
                         r += 1
@@ -79,7 +79,7 @@ class Env:
                     x[0] += 1 if x[2] else -1
                     if x[0] < 0 or x[0] > 9:
                         self.entities[i] = None
-                    if x[0:2] == [self.player_x,self.player_y]:
+                    if x[0:2] == [self.player_x, self.player_y]:
                         if self.entities[i][3]:
                             self.entities[i] = None
                             r += 1
@@ -100,7 +100,7 @@ class Env:
             if self.ramp_timer >= 0:
                 self.ramp_timer -= 1
             else:
-                if self.move_speed > 1 and self.ramp_index%2:
+                if self.move_speed > 1 and self.ramp_index % 2:
                     self.move_speed -= 1
                 if self.spawn_speed > 1:
                     self.spawn_speed -= 1
@@ -126,7 +126,7 @@ class Env:
 
     # Process the game-state into the 10x10xn state provided to the agent and return
     def state(self):
-        state = np.zeros((10,10,len(self.channels)), dtype=bool)
+        state = np.zeros((10, 10, len(self.channels)), dtype=bool)
         state[self.player_y, self.player_x, self.channels['player']] = 1
         for x in self.entities:
             if x is not None:
@@ -158,5 +158,5 @@ class Env:
 
     # Subset of actions that actually have a unique impact in this environment
     def minimal_action_set(self):
-        minimal_actions = ['n','l','u','r','d']
+        minimal_actions = ['n', 'l', 'u', 'r', 'd']
         return [self.action_map.index(x) for x in minimal_actions]
