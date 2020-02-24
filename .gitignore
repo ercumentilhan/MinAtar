@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-.idea/
 lib/
 lib64/
 parts/
@@ -122,3 +121,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# IDE
+.idea/
+
+# Cloud synchorsynchronisation
+desktop.ini
