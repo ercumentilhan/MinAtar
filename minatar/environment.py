@@ -19,10 +19,10 @@ import seaborn as sns
 #
 #####################################################################################################################
 class Environment:
-    def __init__(self, env_name, sticky_action_prob=0.1, difficulty_ramping=True, random_seed=None):
+    def __init__(self, env_name, sticky_action_prob=0.1, difficulty_ramping=True, random_seed=None, time_limit=2000):
         env_module = import_module('minatar.environments.'+env_name)
         self.env_name = env_name
-        self.env = env_module.Env(ramping=difficulty_ramping, seed=random_seed)
+        self.env = env_module.Env(ramping=difficulty_ramping, seed=random_seed, time_limit=time_limit)
         self.env_state_shape = self.env.state_shape()
         self.n_channels = self.env_state_shape[2]
         self.sticky_action_prob = sticky_action_prob
