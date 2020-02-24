@@ -52,7 +52,7 @@ class Env:
             'diver_gauge': 8,
             'diver': 9
         }
-        self.action_map = ['n','l','u','r','d','f']
+        self.action_map = ['n', 'l', 'u', 'r', 'd', 'f']
         self.ramping = ramping
         self.random = np.random.RandomState(seed)
         self.time_limit = time_limit
@@ -113,53 +113,55 @@ class Env:
 
         # Update divers
         for diver in reversed(self.divers):
-            if(diver[0:2]==[self.sub_x,self.sub_y] and self.diver_count<6):
+            if diver[0:2] == [self.sub_x, self.sub_y] and self.diver_count < 6:
                 self.divers.remove(diver)
-                self.diver_count+=1
+                self.diver_count += 1
             else:
-                if(diver[3]==0):
-                    diver[3]=diver_move_interval
-                    diver[0]+=1 if diver[2] else -1
-                    if(diver[0]<0 or diver[0]>9):
+                if diver[3] == 0:
+                    diver[3] = diver_move_interval
+                    diver[0] += 1 if diver[2] else -1
+                    if diver[0] < 0 or diver[0] > 9:
                         self.divers.remove(diver)
-                    elif(diver[0:2]==[self.sub_x,self.sub_y] and self.diver_count<6):
+                    elif diver[0:2] == [self.sub_x, self.sub_y] and self.diver_count < 6:
                         self.divers.remove(diver)
-                        self.diver_count+=1
+                        self.diver_count += 1
                 else:
-                    diver[3]-=1
+                    diver[3] -= 1
 
         # Update enemy subs
         for sub in reversed(self.e_subs):
-            if(sub[0:2]==[self.sub_x,self.sub_y]):
+            if sub[0:2] == [self.sub_x, self.sub_y]:
                 self.terminal = True
-            if(sub[3]==0):
-                sub[3]=self.move_speed
-                sub[0]+=1 if sub[2] else -1
-                if(sub[0]<0 or sub[0]>9):
+
+            if sub[3] == 0:
+                sub[3] = self.move_speed
+                sub[0] += 1 if sub[2] else -1
+                if sub[0] < 0 or sub[0] > 9:
                     self.e_subs.remove(sub)
-                elif(sub[0:2]==[self.sub_x,self.sub_y]):
+                elif sub[0:2] == [self.sub_x,self.sub_y]:
                     self.terminal = True
                 else:
                     for x in self.f_bullets:
-                        if(sub[0:2]==x[0:2]):
+                        if sub[0:2] == x[0:2]:
                             self.e_subs.remove(sub)
                             self.f_bullets.remove(x)
-                            r+=1
+                            r += 1
                             break
             else:
-                sub[3]-=1
-            if(sub[4]==0):
-                sub[4]=enemy_shot_interval
-                self.e_bullets+=[[sub[0] if sub[2] else sub[0], sub[1], sub[2]]]
+                sub[3] -= 1
+
+            if sub[4] == 0:
+                sub[4] = enemy_shot_interval
+                self.e_bullets += [[sub[0] if sub[2] else sub[0], sub[1], sub[2]]]
             else:
-                sub[4]-=1
+                sub[4] -= 1
 
         # Update enemy bullets
         for bullet in reversed(self.e_bullets):
-            if(bullet[0:2]==[self.sub_x,self.sub_y]):
+            if bullet[0:2] == [self.sub_x,self.sub_y]:
                 self.terminal = True
-            bullet[0]+=1 if bullet[2] else -1
-            if(bullet[0]<0 or bullet[0]>9):
+            bullet[0] += 1 if bullet[2] else -1
+            if bullet[0] < 0 or bullet[0] > 9:
                 self.e_bullets.remove(bullet)
             else:
                 if(bullet[0:2]==[self.sub_x,self.sub_y]):
