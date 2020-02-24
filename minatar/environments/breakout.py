@@ -9,7 +9,7 @@ import numpy as np
 # Constants
 #
 #####################################################################################################################
-time_limit = 2000
+
 
 #####################################################################################################################
 # Env
@@ -22,7 +22,7 @@ time_limit = 2000
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping=None, seed=None):
+    def __init__(self, ramping=None, seed=None, time_limit=2000):
         self.channels ={
             'paddle':0,
             'ball':1,
@@ -31,6 +31,7 @@ class Env:
         }
         self.action_map = ['n','l','u','r','d','f']
         self.random = np.random.RandomState(seed)
+        self.time_limit = time_limit
         self.reset()
 
     # Update environment according to agent action
@@ -100,9 +101,10 @@ class Env:
         self.ball_y = new_y
 
         # Update various timers
-        self.terminate_timer -= 1
-        if self.terminate_timer < 0:
-            self.terminal = True
+        if self.terminate_timer is not None:
+            self.terminate_timer -= 1
+            if self.terminate_timer < 0:
+                self.terminal = True
 
         return r, self.terminal
 
@@ -130,7 +132,7 @@ class Env:
         self.strike = False
         self.last_x = self.ball_x
         self.last_y = self.ball_y
-        self.terminate_timer = time_limit
+        self.terminate_timer = self.time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)

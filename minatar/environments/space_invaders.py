@@ -13,7 +13,6 @@ import numpy as np
 shot_cool_down = 5
 enemy_move_interval = 12
 enemy_shot_interval = 10
-time_limit = 2000
 
 #####################################################################################################################
 # Env 
@@ -29,7 +28,7 @@ time_limit = 2000
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping = True, seed = None):
+    def __init__(self, ramping=True, seed=None, time_limit=2000):
         self.channels ={
             'cannon':0,
             'alien':1,
@@ -41,6 +40,7 @@ class Env:
         self.action_map = ['n','l','u','r','d','f']
         self.ramping = ramping
         self.random = np.random.RandomState(seed)
+        self.time_limit = time_limit
         self.reset()
 
     # Update environment according to agent action
@@ -106,9 +106,10 @@ class Env:
                 self.ramp_index += 1
             self.alien_map[0:4, 2:8] = 1
 
-        self.terminate_timer -= 1
-        if self.terminate_timer < 0:
-            self.terminal = True
+        if self.terminate_timer is not None:
+            self.terminate_timer -= 1
+            if self.terminate_timer < 0:
+                self.terminal = True
 
         return r, self.terminal
 
@@ -151,7 +152,7 @@ class Env:
         self.alien_shot_timer = enemy_shot_interval
         self.ramp_index = 0
         self.shot_timer = 0
-        self.terminate_timer = time_limit
+        self.terminate_timer = self.time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)

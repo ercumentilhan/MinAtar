@@ -5,7 +5,6 @@
 ################################################################################################################
 import numpy as np
 
-
 #####################################################################################################################
 # Constants
 #
@@ -14,8 +13,6 @@ ramp_interval = 100
 init_spawn_speed = 10
 init_move_interval = 5
 shot_cool_down = 5
-time_limit = 2000
-
 
 #####################################################################################################################
 # Env 
@@ -27,7 +24,7 @@ time_limit = 2000
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping=True, seed=None):
+    def __init__(self, ramping=True, seed=None, time_limit=2000):
         self.channels ={
             'player': 0,
             'enemy': 1,
@@ -37,6 +34,7 @@ class Env:
         self.action_map = ['n','l','u','r','d','f']
         self.ramping = ramping
         self.random = np.random.RandomState(seed)
+        self.time_limit = time_limit
         self.reset()
 
     # Update environment according to agent action
@@ -91,9 +89,11 @@ class Env:
         # Update various timers
         self.spawn_timer -= 1
         self.move_timer -= 1
-        self.terminate_timer -= 1
-        if self.terminate_timer < 0:
-            self.terminal = True
+
+        if self.terminate_timer is not None:
+            self.terminate_timer -= 1
+            if self.terminate_timer < 0:
+                self.terminal = True
 
         #Ramp difficulty if interval has elapsed
         if self.spawn_speed > 1 or self.move_speed > 1 and self.ramping:
@@ -149,7 +149,7 @@ class Env:
         self.move_timer = self.move_speed
         self.ramp_timer = ramp_interval
         self.ramp_index = 0
-        self.terminate_timer = time_limit
+        self.terminate_timer = self.time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)

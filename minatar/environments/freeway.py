@@ -11,8 +11,6 @@ import numpy as np
 #
 #####################################################################################################################
 player_speed = 3
-time_limit = 2000
-
 
 #####################################################################################################################
 # Env
@@ -28,7 +26,7 @@ time_limit = 2000
 #
 #####################################################################################################################
 class Env:
-    def __init__(self, ramping=None, seed=None):
+    def __init__(self, ramping=None, seed=None, time_limit=2000):
         self.channels ={
             'chicken':0,
             'car':1,
@@ -40,6 +38,7 @@ class Env:
         }
         self.action_map = ['n','l','u','r','d','f']
         self.random = np.random.RandomState(seed)
+        self.time_limit = time_limit
         self.reset()
 
     # Update environment according to agent action
@@ -81,9 +80,12 @@ class Env:
 
         # Update various timers
         self.move_timer-=self.move_timer>0
-        self.terminate_timer-=1
-        if(self.terminate_timer<0):
-            self.terminal = True
+
+        if self.terminate_timer is not None:
+            self.terminate_timer -= 1
+            if self.terminate_timer < 0:
+                self.terminal = True
+
         return r, self.terminal
 
     # Query the current level of the difficulty ramp, difficulty does not ramp in this game, so return None
@@ -132,7 +134,7 @@ class Env:
         self._randomize_cars(initialize=True)
         self.pos = 9
         self.move_timer = player_speed
-        self.terminate_timer = time_limit
+        self.terminate_timer = self.time_limit
         self.terminal = False
 
     # Dimensionality of the game-state (10x10xn)
