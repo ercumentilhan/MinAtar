@@ -1,8 +1,17 @@
-################################################################################################################
-# Authors:                                                                                                     #
-# Kenny Young (kjyoung@ualberta.ca)                                                                            #
-# Tian Tian (ttian@ualberta.ca)                                                                                #
-################################################################################################################
+"""
+Authors:
+Kenny Young (kjyoung@ualberta.ca)
+Tian Tian (ttian@ualberta.ca)
+
+Modifier:
+Ercument Ilhan (e.ilhan@qmul.ac.uk)
+
+The player can move freely along the 4 cardinal directions. Enemies and treasure spawn from the sides. A reward of
++1 is given for picking up treasure. Termination occurs if the player makes contact with an enemy. Enemy and
+treasure direction are indicated by a trail channel. Difficulty is periodically increased by increasing the speed
+and spawn rate of enemies and treasure.
+"""
+
 from importlib import import_module
 import numpy as np
 import cv2
@@ -18,14 +27,33 @@ import seaborn as sns
 # minimal interface. Also defines code for displaying the environment for a human user. 
 #
 #####################################################################################################################
+
+
 class Environment:
-    def __init__(self, env_name, sticky_action_prob=0.1, difficulty_ramping=True, random_seed=None, time_limit=2000):
-        env_module = import_module('minatar.environments.'+env_name)
+    def __init__(self,
+                 env_name,
+                 sticky_action_prob,
+                 random_seed,
+                 time_limit,
+                 difficulty_ramping,
+                 ramp_interval,
+                 initial_difficulty,
+                 level):
+
+        env_module = import_module('minatar.environments.' + env_name)
         self.env_name = env_name
-        self.env = env_module.Env(ramping=difficulty_ramping, seed=random_seed, time_limit=time_limit)
+        self.sticky_action_prob = sticky_action_prob
+
+        self.env = env_module.Env(seed=random_seed,
+                                  time_limit=time_limit,
+                                  ramping=difficulty_ramping,
+                                  ramp_interval=ramp_interval,
+                                  initial_difficulty=initial_difficulty,
+                                  level=level)
+
         self.env_state_shape = self.env.state_shape()
         self.n_channels = self.env_state_shape[2]
-        self.sticky_action_prob = sticky_action_prob
+
         self.last_action = 0
         self.visualized = False
         self.closed = False

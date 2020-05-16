@@ -1,37 +1,50 @@
-################################################################################################################
-# Authors:                                                                                                     #
-# Kenny Young (kjyoung@ualberta.ca)                                                                            #
-# Tian Tian (ttian@ualberta.ca)                                                                                #
-################################################################################################################
+"""
+Authors:
+Kenny Young (kjyoung@ualberta.ca)
+Tian Tian (ttian@ualberta.ca)
+
+Modifier:
+Ercument Ilhan (e.ilhan@qmul.ac.uk)
+
+The player controls a paddle on the bottom of the screen and must bounce a ball to break 3 rows of bricks along the
+top of the screen. A reward of +1 is given for each brick broken by the ball.  When all bricks are cleared another 3
+rows are added. The ball travels only along diagonals, when it hits the paddle it is bounced either to the left or
+right depending on the side of the paddle hit, when it hits a wall or brick it is reflected. Termination occurs when
+the ball hits the bottom of the screen. The balls direction is indicated by a trail channel.
+"""
+
 import numpy as np
 
-#####################################################################################################################
-# Constants
-#
-#####################################################################################################################
+N_DIFFICULTY_LEVELS = 3
+MAX_DIFFICULTY = N_DIFFICULTY_LEVELS - 1
 
 
-#####################################################################################################################
-# Env
-#
-# The player controls a paddle on the bottom of the screen and must bounce a ball tobreak 3 rows of bricks along the 
-# top of the screen. A reward of +1 is given for each brick broken by the ball.  When all bricks are cleared another 3 
-# rows are added. The ball travels only along diagonals, when it hits the paddle it is bounced either to the left or 
-# right depending on the side of the paddle hit, when it hits a wall or brick it is reflected. Termination occurs when
-# the ball hits the bottom of the screen. The balls direction is indicated by a trail channel.
-#
-#####################################################################################################################
 class Env:
-    def __init__(self, ramping=None, seed=None, time_limit=2000):
+    def __init__(self,
+                 seed=None,
+                 time_limit=None,
+                 ramping=True,
+                 ramp_interval=200,
+                 initial_difficulty=0,
+                 level=0):
+
         self.channels ={
             'paddle': 0,
             'ball': 1,
             'trail': 2,
             'brick': 3,
         }
+
         self.action_map = ['n', 'l', 'u', 'r', 'd', 'f']
+
         self.random = np.random.RandomState(seed)
         self.time_limit = time_limit
+
+        self.ramping = ramping
+        self.ramp_interval = ramp_interval
+        self.initial_difficulty = initial_difficulty
+        self.level = level
+
         self.reset()
 
     # Update environment according to agent action
@@ -85,12 +98,17 @@ class Env:
                 self.ball_dir = [3, 2, 1, 0][self.ball_dir]
         elif new_y == 9:
             if np.count_nonzero(self.brick_map) == 0:
-                self.brick_map[1:4, :] = 1
 
-            if self.ball_x == self.pos:
+                self.set_bricks()
+
+            if self.ball_x == self.pos or \
+                    self.ball_x == (self.pos - self.paddle_ls) or \
+                    self.ball_x == (self.pos + self.paddle_rs):
                 self.ball_dir = [3, 2, 1, 0][self.ball_dir]
                 new_y = self.last_y
-            elif new_x == self.pos:
+            elif new_x == self.pos or \
+                    new_x == (self.pos - self.paddle_ls) or \
+                    new_x == (self.pos + self.paddle_rs):
                 self.ball_dir = [2, 3, 0, 1][self.ball_dir]
                 new_y = self.last_y
             else:
@@ -108,7 +126,44 @@ class Env:
             if self.terminate_timer < 0:
                 self.terminal = True
 
+        # Ramp difficulty if interval has elapsed
+        if self.ramping and self.difficulty < MAX_DIFFICULTY:
+            if self.ramp_timer >= 0:
+                self.ramp_timer -= 1
+            else:
+                self.difficulty += 1
+                self.ramp_timer = self.ramp_interval
+
+                if self.difficulty == 0:
+                    self.paddle_ls = 1
+                    self.paddle_rs = 1
+                elif self.difficulty == 1:
+                    self.paddle_ls = 1
+                    self.paddle_rs = 0
+                elif self.difficulty == 2:
+                    self.paddle_ls = 0
+                    self.paddle_rs = 0
+
         return r, self.terminal
+
+    def set_bricks(self):
+        if self.level == 0:
+            self.brick_map[1:4, :] = 1
+        elif self.level == 1:
+            self.brick_map[0, :] = 1
+            self.brick_map[2, :] = 1
+            self.brick_map[4, :] = 1
+        elif self.level == 2:
+            self.brick_map[0:3, 0] = 1
+            self.brick_map[1:4, 1] = 1
+            self.brick_map[2:5, 2] = 1
+            self.brick_map[3:6, 3] = 1
+            self.brick_map[3:6, 4] = 1
+            self.brick_map[3:6, 5] = 1
+            self.brick_map[3:6, 6] = 1
+            self.brick_map[2:5, 7] = 1
+            self.brick_map[1:4, 8] = 1
+            self.brick_map[0:3, 9] = 1
 
     # Query the current level of the difficulty ramp, difficulty does not ramp in this game, so return None
     def difficulty_ramp(self):
@@ -118,19 +173,53 @@ class Env:
     def state(self):
         state = np.zeros((10, 10, len(self.channels)), dtype=bool)
         state[self.ball_y, self.ball_x, self.channels['ball']] = 1
+
         state[9, self.pos, self.channels['paddle']] = 1
+
+        lp = self.pos - self.paddle_ls
+        rp = self.pos + self.paddle_rs
+        if lp >= 0:
+            state[9, lp, self.channels['paddle']] = 1
+        if rp < 10:
+            state[9, rp, self.channels['paddle']] = 1
+
         state[self.last_y, self.last_x, self.channels['trail']] = 1
         state[:, :, self.channels['brick']] = self.brick_map
         return state
 
     # Reset to start state for new episode
     def reset(self):
-        self.ball_y = 3
-        ball_start = self.random.choice(2)
-        self.ball_x, self.ball_dir = [(0, 2), (9, 3)][ball_start]
+        self.difficulty = self.initial_difficulty
+        self.ramp_timer = self.ramp_interval
+
+        if self.level == 0:
+            self.ball_y = 3
+            ball_start = self.random.choice(2)
+            self.ball_x, self.ball_dir = [(0, 2), (9, 3)][ball_start]
+        elif self.level == 1:
+            self.ball_y = 4
+            ball_start = self.random.choice(2)
+            self.ball_x, self.ball_dir = [(0, 2), (9, 3)][ball_start]
+        elif self.level == 2:
+            self.ball_y = 4
+            ball_start = self.random.choice(2)
+            self.ball_x, self.ball_dir = [(0, 2), (9, 3)][ball_start]
+
         self.pos = 4
+
+        if self.difficulty == 0:
+            self.paddle_ls = 1
+            self.paddle_rs = 1
+        elif self.difficulty == 1:
+            self.paddle_ls = 1
+            self.paddle_rs = 0
+        elif self.difficulty == 2:
+            self.paddle_ls = 0
+            self.paddle_rs = 0
+
         self.brick_map = np.zeros((10, 10))
-        self.brick_map[1:4, :] = 1
+        self.set_bricks()
+
         self.strike = False
         self.last_x = self.ball_x
         self.last_y = self.ball_y

@@ -1,32 +1,39 @@
-################################################################################################################
-# Authors:                                                                                                     #
-# Kenny Young (kjyoung@ualberta.ca)                                                                            #
-# Tian Tian (ttian@ualberta.ca)                                                                                #
-################################################################################################################
+"""
+Authors:
+Kenny Young (kjyoung@ualberta.ca)
+Tian Tian (ttian@ualberta.ca)
+
+Modifier:
+Ercument Ilhan (e.ilhan@qmul.ac.uk)
+
+The player begins at the bottom of the screen and motion is restricted to traveling up and down. Player speed is
+also restricted such that the player can only move every 3 frames. A reward of +1 is given when the player reaches
+the top of the screen, at which point the player is returned to the bottom. Cars travel horizontally on the screen
+and teleport to the other side when the edge is reached. When hit by a car, the player is returned to the bottom of
+the screen. Car direction and speed is indicated by 5 trail channels, the location of the trail gives direction
+while the specific channel indicates how frequently the car moves (from once every frame to once every 5 frames).
+Each time the player successfully reaches the top of the screen, the car speeds are randomized. Termination occurs
+after 2500 frames have elapsed.
+"""
+
 import numpy as np
 
-
-#####################################################################################################################
 # Constants
-#
-#####################################################################################################################
+N_DIFFICULTY_LEVELS = 3
+MAX_DIFFICULTY = N_DIFFICULTY_LEVELS - 1
+
 player_speed = 3
 
-#####################################################################################################################
-# Env
-#
-# The player begins at the bottom of the screen and motion is restricted to traveling up and down. Player speed is 
-# also restricted such that the player can only move every 3 frames. A reward of +1 is given when the player reaches 
-# the top of the screen, at which point the player is returned to the bottom. Cars travel horizontally on the screen 
-# and teleport to the other side when the edge is reached. When hit by a car, the player is returned to the bottom of 
-# the screen. Car direction and speed is indicated by 5 trail channels, the location of the trail gives direction 
-# while the specific channel indicates how frequently the car moves (from once every frame to once every 5 frames). 
-# Each time the player successfully reaches the top of the screen, the car speeds are randomized. Termination occurs 
-# after 2500 frames have elapsed.
-#
-#####################################################################################################################
+
 class Env:
-    def __init__(self, ramping=None, seed=None, time_limit=2000):
+    def __init__(self,
+                 seed=None,
+                 time_limit=None,
+                 ramping=True,
+                 ramp_interval=200,
+                 initial_difficulty=0,
+                 level=0):
+
         self.channels ={
             'chicken': 0,
             'car': 1,
@@ -37,8 +44,15 @@ class Env:
             'speed5': 6,
         }
         self.action_map = ['n', 'l', 'u', 'r', 'd', 'f']
+
         self.random = np.random.RandomState(seed)
         self.time_limit = time_limit
+
+        self.ramping = ramping
+        self.ramp_interval = ramp_interval
+        self.initial_difficulty = initial_difficulty
+        self.level = level
+
         self.reset()
 
     # Update environment according to agent action
@@ -65,7 +79,8 @@ class Env:
         # Update cars
         for car in self.cars:
             if car[0:2] == [4, self.pos]:
-                self.pos = 9
+                # self.pos = 9
+                self.terminal = True
             if car[2] == 0:
                 car[2] = abs(car[3])
                 car[0] += 1 if car[3] > 0 else -1
@@ -74,7 +89,8 @@ class Env:
                 elif car[0] > 9:
                     car[0] = 0
                 if car[0:2] == [4, self.pos]:
-                    self.pos = 9
+                    # self.pos = 9
+                    self.terminal = True
             else:
                 car[2] -= 1
 
@@ -85,6 +101,14 @@ class Env:
             self.terminate_timer -= 1
             if self.terminate_timer < 0:
                 self.terminal = True
+
+        # Ramp difficulty if interval has elapsed
+        if self.ramping and self.difficulty < MAX_DIFFICULTY:
+            if self.ramp_timer >= 0:
+                self.ramp_timer -= 1
+            else:
+                self.difficulty += 1
+                self.ramp_timer = self.ramp_interval
 
         return r, self.terminal
 
@@ -118,8 +142,21 @@ class Env:
 
     # Randomize car speeds and directions, also reset their position if initialize=True
     def _randomize_cars(self, initialize=False):
-        speeds = self.random.randint(1, 6, 8)
-        directions = self.random.choice([-1,1], 8)
+
+        if self.difficulty == 0:
+            speeds = self.random.randint(3, 6, 8)
+        elif self.difficulty == 1:
+            speeds = self.random.randint(2, 5, 8)
+        elif self.difficulty == 2:
+            speeds = self.random.randint(1, 4, 8)
+
+        if self.level == 0:
+            directions = self.random.choice([-1, 1], 8)
+        elif self.level == 1:
+            directions = self.random.choice([-1], 8)
+        elif self.level == 2:
+            directions = self.random.choice([1], 8)
+
         speeds *= directions
         if initialize:
             self.cars = []
@@ -131,11 +168,15 @@ class Env:
 
     # Reset to start state for new episode
     def reset(self):
+        self.difficulty = self.initial_difficulty
+        self.ramp_timer = self.ramp_interval
+
         self._randomize_cars(initialize=True)
         self.pos = 9
         self.move_timer = player_speed
         self.terminate_timer = self.time_limit
         self.terminal = False
+
 
     # Dimensionality of the game-state (10x10xn)
     def state_shape(self):

@@ -16,7 +16,7 @@ from minatar import Environment, GUI
 #
 ################################################################################################################
 parser = argparse.ArgumentParser()
-parser.add_argument("--game", "-g", type=str)
+parser.add_argument("--game", "-g", type=str, default='asterix')
 args = parser.parse_args()
 
 # Setup game environment and GUI

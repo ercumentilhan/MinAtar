@@ -27,6 +27,8 @@ enemy_shot_interval = 10
 # hits the player.
 #
 #####################################################################################################################
+
+
 class Env:
     def __init__(self, ramping=True, seed=None, time_limit=2000):
         self.channels ={

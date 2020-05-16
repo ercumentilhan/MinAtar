@@ -1,40 +1,53 @@
-################################################################################################################
-# Authors:                                                                                                     #
-# Kenny Young (kjyoung@ualberta.ca)                                                                            #
-# Tian Tian (ttian@ualberta.ca)                                                                                #
-################################################################################################################
+"""
+Authors:
+Kenny Young (kjyoung@ualberta.ca)
+Tian Tian (ttian@ualberta.ca)
+
+Modifier:
+Ercument Ilhan (e.ilhan@qmul.ac.uk)
+
+The player can move freely along the 4 cardinal directions. Enemies and treasure spawn from the sides. A reward of
++1 is given for picking up treasure. Termination occurs if the player makes contact with an enemy. Enemy and
+treasure direction are indicated by a trail channel. Difficulty is periodically increased by increasing the speed
+and spawn rate of enemies and treasure.
+"""
 import numpy as np
 
-#####################################################################################################################
 # Constants
-#
-#####################################################################################################################
-ramp_interval = 100
-init_spawn_speed = 10
-init_move_interval = 5
-shot_cool_down = 5
+N_DIFFICULTY_LEVELS = 3
+MAX_DIFFICULTY = N_DIFFICULTY_LEVELS - 1
 
-#####################################################################################################################
-# Env 
-#
-# The player can move freely along the 4 cardinal directions. Enemies and treasure spawn from the sides. A reward of
-# +1 is given for picking up treasure. Termination occurs if the player makes contact with an enemy. Enemy and
-# treasure direction are indicated by a trail channel. Difficulty is periodically increased by increasing the speed
-# and spawn rate of enemies and treasure.
-#
-#####################################################################################################################
+SPAWN_INTERVALS = [20, 10, 5]
+MOVE_INTERVALS = [5, 5, 5]
+
+
 class Env:
-    def __init__(self, ramping=True, seed=None, time_limit=2000):
-        self.channels ={
+    def __init__(self,
+                 seed=None,
+                 time_limit=None,  # 1000
+                 ramping=True,
+                 ramp_interval=200,
+                 initial_difficulty=0,
+                 level=0
+                 ):
+
+        self.channels = {
             'player': 0,
             'enemy': 1,
             'trail': 2,
             'gold': 3
         }
-        self.action_map = ['n','l','u','r','d','f']
-        self.ramping = ramping
+
+        self.action_map = ['n', 'l', 'u', 'r', 'd', 'f']
+
         self.random = np.random.RandomState(seed)
         self.time_limit = time_limit
+
+        self.ramping = ramping
+        self.ramp_interval = ramp_interval
+        self.initial_difficulty = initial_difficulty
+        self.level = level
+
         self.reset()
 
     # Update environment according to agent action
@@ -48,7 +61,7 @@ class Env:
         # Spawn enemy if timer is up
         if self.spawn_timer == 0:
             self._spawn_entity()
-            self.spawn_timer = self.spawn_speed
+            self.spawn_timer = self.spawn_interval
 
         # Resolve player action
         if a == 'l':
@@ -72,7 +85,7 @@ class Env:
                         self.terminal = True
 
         if self.move_timer == 0:
-            self.move_timer = self.move_speed
+            self.move_timer = self.move_interval
             for i in range(len(self.entities)):
                 x = self.entities[i]
                 if x is not None:
@@ -96,22 +109,25 @@ class Env:
                 self.terminal = True
 
         # Ramp difficulty if interval has elapsed
-        if self.ramping and (self.spawn_speed > 1 or self.move_speed > 1):
+        if self.ramping and self.difficulty < MAX_DIFFICULTY:
             if self.ramp_timer >= 0:
                 self.ramp_timer -= 1
             else:
-                if self.move_speed > 1 and self.ramp_index % 2:
-                    self.move_speed -= 1
-                if self.spawn_speed > 1:
-                    self.spawn_speed -= 1
-                self.ramp_index += 1
-                self.ramp_timer = ramp_interval
+                self.difficulty += 1
+                self.move_interval = MOVE_INTERVALS[self.difficulty]
+                self.spawn_interval = SPAWN_INTERVALS[self.difficulty]
+                self.ramp_timer = self.ramp_interval
 
         return r, self.terminal
 
     # Spawn a new enemy or treasure at a random location with random direction (if all rows are filled do nothing)
     def _spawn_entity(self):
-        lr = self.random.choice([True, False])
+        if self.level == 0:
+            lr = self.random.choice([True, False])
+        elif self.level == 1:
+            lr = True
+        elif self.level == 2:
+            lr = False
         is_gold = self.random.choice([True, False], p=[1/3, 2/3])
         x = 0 if lr else 9
         slot_options = [i for i in range(len(self.entities)) if self.entities[i] is None]
@@ -121,8 +137,8 @@ class Env:
         self.entities[slot] = [x,slot + 1, lr, is_gold]
 
     # Query the current level of the difficulty ramp, could be used as additional input to agent for example
-    def difficulty_ramp(self):
-        return self.ramp_index
+    def get_difficulty(self):
+        return self.difficulty
 
     # Process the game-state into the 10x10xn state provided to the agent and return
     def state(self):
@@ -141,14 +157,19 @@ class Env:
     def reset(self):
         self.player_x = 5
         self.player_y = 5
-        self.entities = [None]*8
+        self.entities = [None] * 8
         self.shot_timer = 0
-        self.spawn_speed = init_spawn_speed
-        self.spawn_timer = self.spawn_speed
-        self.move_speed = init_move_interval
-        self.move_timer = self.move_speed
-        self.ramp_timer = ramp_interval
-        self.ramp_index = 0
+
+        self.difficulty = self.initial_difficulty
+
+        self.move_interval = MOVE_INTERVALS[self.difficulty]
+        self.move_timer = self.move_interval
+
+        self.spawn_interval = SPAWN_INTERVALS[self.difficulty]
+        self.spawn_timer = self.spawn_interval
+
+        self.ramp_timer = self.ramp_interval
+
         self.terminate_timer = self.time_limit
         self.terminal = False
 
